@@ -1,0 +1,225 @@
+---
+title: "tute2.Rmd"
+author: "Peter Mahoney, Andrej Panjkov"
+output: html_document
+---
+
+```{r setup, include=FALSE, echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+require(ggplot2)
+```
+
+## BMSC203 2016 tute 2 in R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+Note I am not using echo=FALSE, to reveal the R code being executed.
+
+---
+
+### Part 2: Descriptive Statistics
+
+__
+You have been given a set of data describing the weights (in kg) of randomly selected male members of a local gym.
+__
+
+__
+74.6	93.5	87.1	79.4	80.6	86.3	92.4	78.3	85.0	86.3
+__
+
+__
+2)	From the same data set, calculate the following descriptive statistics using Excel (you will need to input the data into Excel to complete this question).
+__
+
+__
+a)	The mean weight of male gym members
+__
+
+__
+b)	The median weight of male gym members
+__
+
+__
+c)	The modal weight of male gym members
+__
+
+__
+d)	The standard deviation of the sample weights
+__
+
+__
+e)	The size of the sample (n)
+__
+
+__
+f)	The lowest weight in the sample
+__
+
+__
+g)	The highest weight in the sample
+__
+```
+
+```{r mgw}
+malegymweights = c(74.6,	93.5,	87.1,	79.4,	80.6,	86.3,	92.4,	78.3,	85.0,	86.3)
+mean(malegymweights)
+median(malegymweights)
+sd(malegymweights)
+```
+For the modal weight: R does not have a simple builtin function for the mode - it depends on the data type. We do it this way:
+
+First, generate a count table and give it the name mgwcounts:
+```{r}
+mgwcounts <- table(malegymweights)
+
+```
+
+Now find the maximum count, and find the weight with that count:
+```{r}
+names(mgwcounts)[mgwcounts == max(mgwcounts)]
+```
+
+Alternatively, we can use the function __summary__ to quickly list some these descriptive statistics:
+```{r}
+summary(malegymweights)
+```
+
+---
+
+### Part 4 Question 1
+
+__
+1)	The first tab in the Excel workbook, called <Patient Data>, contains data about the number of patients seen during night shifts at a local hospital emergency room. Using these data, construct a frequency table.  An appropriate number of interval classes is likely to be somewhere between 5 and 10. Start by sorting the data (ask for help if you don't know how to sort data in Excel).  Then determine the interval classes that you will use.
+__
+
+
+First we will import the data from excel into R.  There are a number of ways to do this - cut-paste-edit; export a csv file and import into R with read.csv; or install a third-party package for directly importing from .xls files. We'll used read.csv.
+
+Begin by opening excel and exporting the spreadsheet as a .csv file (comma-separated-values.)  (Use the file/save as menu.)
+
+Now read the csv file into a _dataframe_, display it, and show the descriptive statistics and the frequency table:
+
+```{r 4.1}
+patientdata <- read.csv("Patient Data.csv",header=TRUE)
+patientdata
+length(patientdata$Patients.seen)
+
+summary(patientdata)
+table(patientdata)
+```
+To generate the frequency table, use the `hist` function from the `graphics` package.  We'll let R choose the breakpoints. We'll plot it too.
+```{r}
+library(graphics)
+hist(patientdata$Patients.seen,plot=FALSE)
+hist(patientdata$Patients.seen)
+
+```
+
+If we want different breakpoints:
+```{r}
+hist(patientdata$Patients.seen,breaks=seq(10,70,5), plot=FALSE)
+hist(patientdata$Patients.seen,breaks=seq(10,70,5), plot=TRUE)
+
+```
+
+### Part 4 Question 2
+
+__
+2)	Using the same data, construct a stem and leaf plot to visualise the distribution of the data.
+__
+
+A stem-and-leaf plot is more of a tool for a quick hand analysis, but R can do one for us:
+```{r}
+stem(patientdata$Patients.seen,scale =2)
+```
+
+### Part 4 Question 3
+
+__
+3)	The second tab in the Excel workbook, called <Grasshopper Data>, contains data about the total length and total weight of female chameleon grasshoppers (Kosciuscola tristis) sampled at Mount Kosciuszko. Using these data, prepare a scatterplot to visualise the data. Make sure that the finished graph is formatted correctly (see Lecture 4 if you are unsure what is meant by correct formatting).
+__
+
+
+A scatterplot of the grasshopper data.  
+```{r}
+ghdata=read.csv("Grasshopper Data.csv", header=TRUE)
+plot(ghdata$Total.Length..mm.,ghdata$Total.Weight..g.,
+     main="Kosciuscola tristis weight vs length",
+     xlab="Total Length (mm)",
+     ylab="Total Weight (g)")
+```
+
+
+### Part 4 Question 4
+
+__
+4)	The third tab in the Excel workbook, called <Jacky Lizard Data>, contains data about the snout-vent length (SVL) and sex of jacky lizards (Amphibolurus muricatus) sampled at two locations, Myall Lakes and Tomago. Open the statistical software SPSS (refer to the textbook or to the file <SPSS V20 Instructions> on LEO if necessary).  Use the jacky lizard data to produce a graph showing the comparison of mean ? standard deviation for lengths of male and female jacky lizards (Amphibolurus muricatus) at Myall Lakes and Tomago.  
+__
+
+To do the boxplots, we have to reorganise the data.  But first we can do boxplots for each site, grouped by sex.
+
+```{r}
+jackyData <- read.csv("Jacky Lizard Data.csv",header=FALSE,skip=2)
+colnames(jackyData)<-c("MyallLakes","sexML","Tomago","sexT")
+boxplot(MyallLakes ~ sexML, jackyData)
+title(main="Myall Lakes")
+boxplot(Tomago ~  sexT,jackyData)
+title(main="Tomago")
+```
+
+The jackydata spreadsheet is organised by rows, but the Myall Lakes observations are independent of the Tomago observations.  We can either split the data into two data frames, one for each site, or four, (one for each site/sex), or reorganise the data into a single dataframe with factors site/sex. I choose the last.
+
+```{r}
+jdM <- data.frame(lengths=jackyData$MyallLakes,sex=jackyData$sexML,site="Myall Lakes")
+jdT <- data.frame(lengths=jackyData$Tomago,sex=jackyData$sexT,site="Tomago")
+jd=rbind(jdM,jdT) # stacks the rows of the two dataframes
+```
+
+Now the boxplot (I polished this in Rstudio's console before putting the code in the R Markdown file):
+```{r}
+boxplot(lengths ~ sex + site, jd,
+        names=c("F Myall Lakes", "M Myall Lakes", "F Tomago", "M Tomago"),
+        las=2,
+        at=c(1,2,4,5), 
+        ylab="Snout-vent Lengths (cm)",
+        col=c("goldenrod","cyan","goldenrod","cyan")) 
+# Note the formula specifies partitioning by both factors.
+# las rotates labels so they are all visible
+# at controls positioning, so we can group sites more clearly - notice 3 is missing.
+title("Jacky Lizard Lengths Percentile Boxplots") # I assume cm.
+```
+
+This is a nice format, but the question asks for boxplots positioned by mean and sized by standard deviation.  A web search gives some recipes, using the lower level function bxp. First we need to build the summary data. tapply applies the function at the end to the first data item, factored by the list of factors.
+
+```{r}
+jdmeans = tapply(jd$lengths,list(jd$sex,jd$site),mean)
+jdstdevs = tapply(jd$lengths,list(jd$sex,jd$site),sd)
+jdmaxs = tapply(jd$lengths,list(jd$sex,jd$site),max)
+jdmins = tapply(jd$lengths,list(jd$sex,jd$site),min) 
+print(jdmeans)
+print(jdstdevs)
+print(jdmaxs)
+print(jdmins)
+# mean plus or minus stdev
+jdmeanPlusSD = jdmeans + jdstdevs
+jdmeanMinusSD = jdmeans - jdstdevs
+# assemble the columns into a list for supply to bxp
+# probably a better way to do this
+Fsummaries.df = rbind(jdmins["F",],jdmeanMinusSD["F",],jdmeans["F",],jdmeanPlusSD["F",],jdmaxs["F",])
+Msummaries.df = rbind(jdmins["M",],jdmeanMinusSD["M",],jdmeans["M",],jdmeanPlusSD["M",],jdmaxs["M",])
+Fsummaries.df
+bxp.data = 
+list(stats=data.matrix(cbind(Fsummaries.df, Msummaries.df)),n=rep(1,4))
+colnames(bxp.data$stats) <- c("F Myall Lakes", "F Tomago", "M Myall Lakes", "M Tomago")
+
+bxp(bxp.data, show.names=TRUE,
+        las=2,
+        at=c(1,2,4,5), 
+        ylab="Snout-vent Lengths (cm)",
+        col=c("goldenrod","cyan","goldenrod","cyan"))
+
+```
+
+Those are the boxplots showing min, mu-sigma,mu,mu+sigma, max. Note that in some cases mu-sigma is less than min.  with some more work, I'm sure we can make this code cleaner, and get the colours and the boxplot labels working, but for now, we leave it here.
+
+---

@@ -1,0 +1,406 @@
+---
+title: "Tutorial 5  - Standard Error, Confidence Intervals"
+output: html_document
+author: "Peter Mahoney, Andrej Panjkov"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Tutorial 5
+
+## Part 1: The standard error of the mean
+
+### Question 1
+
+__
+1)	Open the Excel workbook called Tutorial 5 Data (on the LEO site).  In the first Tab, labelled IQs, are the IQ scores of a sample of a random sample of people from Australia.
+__
+
+Load the IQ data:
+
+```{r}
+IQ.df <- read.csv("Tutorial 5 Data-IQs.csv", header=TRUE)
+```
+
+__
+a)	What is the mean IQ of the people in this sample? 
+__
+
+a) mean:
+```{r}
+IQ.mean <- mean(IQ.df$Sample.IQs)
+IQ.mean
+```
+
+__
+b)	Is this equal to the mean IQ of all of the people in Australia? If not, why not
+__
+
+b) This sample provides an estimate of the mean IQ of all Australians, but is unlikely to exactly equal the mean IQ of the population.
+
+__
+c)	What is the standard error (SE) of the mean for this sample? 
+__
+
+c) Standard Error of the population mean:  (Using a function definition.)
+```{r}
+standard.error <- function(x) sqrt(var(x)/length(x))
+
+IQ.se <- standard.error(IQ.df$Sample.IQs)
+IQ.se
+```
+
+__
+d)	Calculate the 95% confidence interval for the true (population) mean.
+__
+
+95% confidence interval:
+```{r}
+IQ.ci.low = IQ.mean - qnorm(1- 0.05/2)*IQ.se
+IQ.ci.high = IQ.mean + qnorm(1- 0.05/2)*IQ.se
+IQ.ci.low
+IQ.ci.high
+```
+
+__
+e)	What does this confidence interval actually indicate? 
+__
+
+The probability is 95% that the mean of the population IQ distribution lies  in the confidence interval.
+```{r,echo=FALSE}
+sprintf( "(%5.2f,%5.2f)",IQ.ci.low,IQ.ci.high)
+```
+( and 5% that it does not.)
+
+Note: R can generate the confidence interval using the t.test function. We extract the confidence interval:
+```{r}
+t.test(IQ.df$Sample.IQs, conf.level=0.95)$conf.int
+
+```
+
+The slight difference to the answer above is due to the more accurate critical t-value used instead of the critical z-value.  There is a difference even when n=70:
+
+```{r}
+qnorm(1-0.05/2)
+qt(1-0.05/2,df=69)
+```
+
+
+---
+
+### Question 2
+
+__
+2)	In the Excel workbook called Tutorial 5 Data (on the LEO site), the second Tab, labelled More IQs, contains another random sample of IQ scores.
+__
+```{r}
+IQMore.df <- read.csv("Tutorial 5 Data-More IQs.csv", header=TRUE)
+```
+
+__
+a)	What is the mean IQ of the people in this second sample? 
+__
+
+```{r}
+IQMore.mean <- mean(IQMore.df$Sample.2.Iqs)
+IQMore.mean
+```
+
+__
+b)	What is the standard error (SE) of the mean for this sample? 
+__
+
+```{r}
+
+
+IQMore.se <- standard.error(IQMore.df$Sample.2.Iqs)
+IQMore.se
+```
+__
+c)	Calculate the 95% confidence interval for the true (population) mean. 
+__
+
+We'll just use the t.test.
+```{r}
+t.test(IQMore.df$Sample.2.Iqs, conf.level=0.95)$conf.int
+```
+
+__
+d)	Compare the 95% confidence intervals from questions 1 and 2. Do you think the two samples are drawn from the same population? Why (or why not)? 
+__
+
+The confidence intervals are:
+```{r}
+t.test(IQ.df$Sample.IQs, conf.level=0.95)$conf.int
+t.test(IQMore.df$Sample.2.Iqs, conf.level=0.95)$conf.int
+```
+
+
+As these intervals overlap, we cannot say that they come from different populations.  The two samples may come from the same population with mean in the overlap of the confidence intervals.
+
+
+---
+
+### Question 3
+
+__
+3)	In Tutorial 2, Part 3, Question 4, you created a graph with error bars showing the standard deviations of the data. Reuse the same data to create similar graphs with error bars showing: a) standard error; and b) the 95% confidence interval. 
+__
+
+```{r}
+jackyData <- read.csv("Jacky Lizard Data.csv",header=FALSE,skip=2)
+colnames(jackyData)<-c("MyallLakes","sexML","Tomago","sexT")
+jdM <- data.frame(lengths=jackyData$MyallLakes,sex=jackyData$sexML,site="Myall Lakes")
+jdT <- data.frame(lengths=jackyData$Tomago,sex=jackyData$sexT,site="Tomago")
+jd=rbind(jdM,jdT) # stacks the rows of the two dataframes
+
+jdmeans = tapply(jd$lengths,list(jd$sex,jd$site),mean)
+jdstdevs = tapply(jd$lengths,list(jd$sex,jd$site),sd)
+
+
+
+# New for this tute, we will need columns for standard error, mean+se, mean-se, cihigh, cilow.
+
+jdses=tapply(jd$lengths,list(jd$sex,jd$site),standard.error)
+# mean plus or minus stdev
+jdmeanPlusSE = jdmeans + jdses
+jdmeanMinusSE = jdmeans - jdses
+
+# confidence interval. I should try extract from t.test objects...
+
+jdcihigh <- jdmeans+1.96*jdses
+jdcilow <- jdmeans-1.96*jdses
+
+print(jdmeans)
+print(jdstdevs)
+
+print(jdses)
+print(jdmeanPlusSE)
+print(jdmeanMinusSE)
+
+print(jdcihigh)
+print(jdcilow)
+
+# assemble the columns into a list for supply to bxp
+# probably a better way to do this
+Fsummaries.df = rbind(jdcilow["F",],jdmeanMinusSE["F",],jdmeans["F",],jdmeanPlusSE["F",],jdcihigh["F",])
+Msummaries.df = rbind(jdcilow["M",],jdmeanMinusSE["M",],jdmeans["M",],jdmeanPlusSE["M",],jdcihigh["M",])
+bxp.data = 
+list(stats=data.matrix(cbind(Fsummaries.df, Msummaries.df)),n=rep(1,4))
+colnames(bxp.data$stats) <- c("F Myall Lakes", "F Tomago", "M Myall Lakes", "M Tomago")
+
+bxp(bxp.data, show.names=TRUE,
+        las=2,
+        at=c(1,2,4,5), 
+        ylab="Snout-vent Lengths (cm)",
+        main="Mean plus/minus SE, and Confidence Interval (95%)",
+        col=c("goldenrod","cyan","goldenrod","cyan"))
+
+```
+
+
+---
+
+---
+
+
+## Part 2: The standard error of a proportion
+
+__
+Of 200 patients surveyed at a randomly selected Australian medical centre, 24 are allergic to penicillin.
+__
+
+### Question 1
+
+__
+(a) What proportion of the patients are allergic to penicillin? 
+__
+```{r}
+prop.allergic = 24/200
+prop.allergic
+```
+
+__
+(b) What is the standard error of this proportion? 
+__
+
+```{r}
+# should handle div by zero
+prop.se <- function(prop,N) sqrt(prop*(1-prop)/(N-1))
+prop.allergic.se = prop.se(prop.allergic,200)
+prop.allergic.se
+```
+
+__
+(c) Calculate the 99% confidence interval for the proportion of patients who are allergic to penicillin in Australia.
+__
+
+```{r}
+conf.level = 0.99
+alpha = 1 - conf.level
+qt(1-alpha/2,df=199)
+prop.allergic.cihigh = prop.allergic + prop.allergic.se*qt(1-alpha/2,df=199)
+prop.allergic.cilow = prop.allergic - prop.allergic.se*qt(1-alpha/2,df=199)
+```
+
+So the 99% confidence interval for the proportion of patients who are allergic to penicillin at the chosen medical centre is:
+
+```{r}
+prop.allergic.cilow
+prop.allergic.cihigh
+```
+
+__
+d)	What does this confidence interval actually indicate? 
+
+The true proportion of patients of that medical centre who are allergic to penicillin is in that interval with probability 99% (and outside it with probability 0.01)
+
+As we have not sampled from other medical centres, it would be unwise to draw any conclusions about the overall proportion across all Australian patients at medical centres.
+__
+
+---
+
+---
+
+## Part 3: Null hypotheses
+
+### Question 1
+__
+1)	In groups of three people, discuss appropriate null hypotheses (H0) for the following situations (record your answers)...
+__
+
+__
+a)	You have the exam marks of HSC History students from two different high schools and you suspect that the means may be different between the two schools. 
+__
+
+H0: The mean marks of HSC students at the two high schools are the same. 
+
+__
+b)	You have the results of an Australian survey of the favourite television show of 5000 people. The results are listed by state and you suspect that the favourite show is different in different states.  
+__
+
+H0: The most popular TV show is the same in all states.
+
+__
+c)	You have data on the ages of individual Facebook users and the number of hours that each user spends on Facebook per month. You suspect that people over 40 spend fewer hours on Facebook than people under 40.
+__
+
+H0: The mean number of hours spent on facebook is the same for people over 40 and under 40 years of age.
+
+__
+d)	You have data on the ages of individual Facebook users and the number of hours that each user spends on Facebook per month. You suspect there is a relationship between Facebook users' ages and the number of hours per month that they spend on Facebook.
+__
+
+H0: There is no relationship between a Facebook user's age and the number of hours they spend on Facebook.
+
+__
+e)	For each of the above null hypotheses, record your alternate hypothesis (H1). 
+__
+
+* H1: The mean marks of HSC students at the two high schools are different. 
+* H1: The most popular TV show is not the same in  all states.
+* H1: The mean number of hours spent on facebook is different for people over 40 and under 40 years of age.
+* H1: There is a  relationship between a Facebook user's age and the number of hours they spend on Facebook.
+__
+
+---
+
+---
+
+## Part 4: Test statistics and p values
+
+### Question 1
+__
+1)	When statistically testing a null hypothesis, you calculate a test statistic that is higher than the critical value for that test.
+__
+
+
+__
+a)	Do you accept or reject the null hypothesis? 
+__
+
+This depends on the statistical test - but for many of the more common tests, if the test statistic is higher than the critical value, that indicates that the sample is a rare, or extreme,  one if the Null Hypothesis is true. By our decision scheme, we therefore choose to reject the Null Hypothesis.
+
+__
+b)	What effect does increasing the degrees of freedom in your test have on the critical value for the test statistic? 
+__
+
+For many statistical tests, increasing the D.O.F. *reduces* the critical value.
+
+__
+c)	Why is this so? 
+__
+
+Increasing the degrees of freedom usually follows from increasing the sample sizes in some way. Larger samples' statistics (e.g. mean) show less variability from the population statistics - as an example, the standard error of a sample mean decreases with increasing n. Lower values of statistics are now considered extreme, as larger samples attain them less frequently.
+
+---
+
+### Question 2
+
+__
+2)	When statistically testing a null hypothesis, SPSS returns a significance (p) value of 0.12.
+__
+
+__
+a)	What does the significance (p) value of 0.12 actually tell you? 
+__
+
+This tells us that the sample obtained is one that is obtained (if the Null Hypothesis holds) no more often than in 12% of samples.
+
+__
+b)	At α = 0.05, do you accept or reject the null hypothesis? 
+__
+
+This p-value is greater than $\alpha$. The sample that produced this p-value is therefore not rare enough to be considered extreme, or unusual. We accept the null hypothesis.
+
+__
+c)	At α = 0.01, do you accept or reject the null hypothesis? 
+__
+
+At this $alpha$, we also have $p > \alpha$, so here we also accept the null hypothesis.
+__
+d)	Why is $\alpha$ often set at 0.05 in statistical testing? 
+__
+
+Just a convention, which varies betweens disciplines.  Imposed by journals often.
+
+---
+
+---
+
+
+## Part 5: Errors in statistical analysis
+
+### Question 1
+
+__
+1)	What is a type 1 error?
+__
+
+A False Positive - rejecting H0 when it is true.
+
+---
+
+### Question 2
+
+__
+2)	If α = 0.01, what percentage of the time do we expect to produce a type 1 error? 
+__
+
+1% of the time - α is the cutoff probability for rejecting H0 when it is true.  So if H0 is true, 1% of tests will fall in the extreme region of the  statistic involved, whereupon we choose to reject H0.
+
+---
+
+### Question 3
+
+__
+3)	What is a type 2 error? 
+__
+
+A False Negative - accepting H0 when the alternative hypothesis is true.
+
+---
+
+---

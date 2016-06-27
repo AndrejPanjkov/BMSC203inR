@@ -1,0 +1,402 @@
+---
+title: "Tutorial 6 - paired and independent t-tests, F-tests of variances"
+output: html_document
+author: "Peter Mahoney, Andrej Panjkov"
+---
+
+
+
+## Part 1: Comparing two means
+
+
+### Question 1
+
+__
+1)	Open the Excel workbook called <Tutorial 6 Data> (on the LEO site).  In the first Tab, labelled <10km times>, are the times (in minutes) taken by 20 runners to complete a 10km race, both before and after completing a series of strengthening exercises. You have been asked to test whether the exercises have had an effect on the time taken by the runners to complete a 10km race?
+__
+
+
+```{r}
+Exercise.times.df <- read.csv(file = "Tutorial 6 Data - Exercise Times.csv", header=TRUE)
+plot(Exercise.times.df[2:3])
+hist(Exercise.times.df$Pre.exercise.10km.time..mins.,plot=TRUE)
+hist(Exercise.times.df$Post.exercise.10km.time..mins.,plot=TRUE)
+
+```
+
+
+__
+a)	What types of variables do you have?
+__
+
+__
+b)	On what scale are the variables measured?
+__
+
+* Time taken: continuous, ratio, scale
+* Before/After Factor: categorical, nominal (maybe ordinal)
+* Runner ID: categorical, nominal
+
+
+__
+c)	What will your null hypothesis (H0) be for this analysis?
+__
+
+H0: The mean time taken by runners to complete the 10km course is the same before and after the strengthening exercises.
+
+__
+d)	What will your alternate hypothesis (H1) be for this analysis?
+__
+
+H1: The mean time taken by runners to complete the 10km course is NOT the same before and after the strengthening exercises. 
+
+
+
+__
+e)	What type of statistical test will you use to test this null hypothesis?
+__
+
+The time taken data are paired. We will use a paired t-test.
+
+
+__
+f)	What are the degrees of freedom for your test?
+__
+
+```{r}
+dof <- length(Exercise.times.df$Runner.ID.Number) - 1
+dof
+```
+
+
+
+__
+g)	What are the assumptions of your chosen test?
+__
+
+* Observations are paired
+* Samples from populations with equal variances
+* Differences are normally distributed
+
+
+
+__
+h)	Do the data satisfy these assumptions? (Give your evidence here. Do not Use SPSS)
+__
+
+Yes, the observations are paired (by Runner ID).
+
+To check that the two samples have the same variances, we will use an F-test.
+
+A precondition for the F-test, according to the lecture notes, is that the two samples be both normally distributed. 
+
+So if we choose to use an F-test to test the variances, we will have three normality checks to perform, one for each of the samples, and one for the differences of the samples.
+
+There is a theorem that if two normally distributed variables are independent, their difference is also normally distributed. If this held, we could just check the normality of each group. In this case, it is not safe to make use of this result, as paired data is unlikely to be independent.
+
+So we must still check normality three times. We'll use Shapiro-Wilks.
+
+```{r}
+attach(Exercise.times.df)
+shapiro.test(Pre.exercise.10km.time..mins.)
+shapiro.test(Post.exercise.10km.time..mins.)
+shapiro.test(Post.exercise.10km.time..mins. - Pre.exercise.10km.time..mins. )
+qqnorm(Pre.exercise.10km.time..mins.); qqline(Pre.exercise.10km.time..mins.)
+qqnorm(Post.exercise.10km.time..mins.)
+qqline(Pre.exercise.10km.time..mins.)
+qqnorm(Post.exercise.10km.time..mins.-Pre.exercise.10km.time..mins.)
+qqline(Post.exercise.10km.time..mins.-Pre.exercise.10km.time..mins.)
+detach(Exercise.times.df)
+```
+
+So, from the q-q plots, we see no great departure from normality.  The p-values from the Shapiro-Wilk tests are all large, so we accept the S-W null hypothesis that these three samples are normally distributed.
+
+It remains to check whether the sample variances are statistically the same.  We now use the F-test, as we have normally distributed samples.
+
+```{r}
+
+var.test(Exercise.times.df$Pre.exercise.10km.time..mins., Exercise.times.df$Post.exercise.10km.time..mins.)
+
+
+```
+
+Observe the high p-value, and the confidence interval which includes F=1. We accept the null hypothesis, Pre and Post times have the same variance.
+
+For comparison, we will do the F-test "manually".
+
+```{r}
+pre.var <- var(Exercise.times.df$Pre.exercise.10km.time..mins.)
+post.var <- var(Exercise.times.df$Post.exercise.10km.time..mins.)
+
+f <- max(pre.var, post.var)/min(pre.var,post.var)
+f
+1/f
+
+```
+
+Notice that R's var.test uses the reciprocal of the lecture's F statistic.
+
+Now look at the critical F table, at (19,19)  F_crit is about 2.51. R says:
+
+```{r}
+# put half alpha at each tail, use upper tail for F>1
+qf(0.025,19,19,lower.tail=FALSE)
+
+```
+
+As F< Fcrit, we accept H0.
+
+All preconditions for the paired t-test are now verified.
+
+__
+i)	Calculate your test statistic (by hand or using Excel) as described in the lecture.
+__
+
+```{r}
+t.test(Exercise.times.df$Pre.exercise.10km.time..mins., Exercise.times.df$Post.exercise.10km.time..mins., paired=TRUE, var.equal=TRUE)
+qt(0.025,19)
+```
+
+Note the var.equal parameter selects between heteroscedastic and homoscedastic t-tests.
+
+We obtain: 
+
+* high p-value
+* 95% confidence interval for the difference of the means contains zero
+* the critical t-value (left tail) is -2.093
+
+All of these observations mean that we accept H0 - there is no difference in the 10km time, Pre- and Post-exercise.
+
+We could calculate the t-value using the formula...
+
+
+
+
+__
+j)	What is the critical value of the test statistic for this test (from the critical values table)?
+__
+
+```{r}
+qt(0.025, 19)
+```
+
+
+
+__
+k)	Do you accept or reject your null hypothesis?
+__
+
+Accept.
+
+
+__
+l)	What does this mean for your alternate hypothesis?
+__
+
+There is not sufficient statistical evidence for us to accept the alternative hypothesis.
+
+---
+
+### Question 2
+
+__
+2)	In the Excel workbook called <Tutorial 6 Data> (on the LEO site), the second Tab, labelled <Fat content>, contains measures of the saturated fat content (in grams per kg) of tested hamburgers and pizzas. You have been asked to assess whether hamburgers or pizzas contain more saturated fat per kg eaten.
+__
+
+
+```{r}
+fat.df = read.csv("Tutorial 6 Data - Fat Content.csv", header=TRUE)
+hist(fat.df$Hamburger.saturated.fat..g.per.kg.,plot=TRUE)
+hist(fat.df$Pizza.saturated.fat..g.per.kg.,plot = TRUE)
+```
+
+
+__
+a)	What types of variables do you have?
+__
+
+__
+b)	On what scale are the variables measured?
+__
+
+Both fat content variables are continuous numeric variables on a ratio scale.
+
+
+__
+c)	What will your null hypothesis (H0) be for this analysis?
+__
+
+H0: The mean fat content of hamburgers and pizzas are the same.
+
+
+__
+d)	What will your alternate hypothesis (H1) be for this analysis?
+__
+
+H1: The mean fat content of hamburgers and pizzas are unequal.
+
+
+
+__
+e)	What type of statistical test will you use to test this null hypothesis?
+__
+
+Independent samples t-test.
+
+
+
+__
+f)	What are the assumptions of your chosen test?
+__
+
+* Groups are independent
+* Each group is from a normally distributed population.
+* Each group's source population has the same variance.
+
+
+
+__
+g)	Do the data satisfy these assumptions? (Give your evidence here. Do not use SPSS.)
+__
+
+We will suppose, without knowing how the data were gathered, that the samples are independent. (They may not be, if the burgers and pizzas come from the same manufacturer for example, or they were both stored in a faulty fridge.)
+
+The histograms show no great deviation from normality, at these low bin counts.  We will check with Shapiro-Wilk and Q-Q plots.
+
+```{r}
+shapiro.test(fat.df$Hamburger.saturated.fat..g.per.kg.)
+shapiro.test(fat.df$Pizza.saturated.fat..g.per.kg.)
+
+qqnorm(fat.df$Hamburger.saturated.fat..g.per.kg.)
+qqline(fat.df$Hamburger.saturated.fat..g.per.kg.)
+qqnorm(fat.df$Pizza.saturated.fat..g.per.kg.)
+qqline(fat.df$Pizza.saturated.fat..g.per.kg.)
+
+```
+
+So both groups are from normally distributed populations.
+
+Lastly we check that the variances are equal.
+```{r}
+var.test(fat.df$Hamburger.saturated.fat..g.per.kg.,fat.df$Pizza.saturated.fat..g.per.kg.)
+
+var(fat.df$Hamburger.saturated.fat..g.per.kg.)
+var(fat.df$Pizza.saturated.fat..g.per.kg.)
+```
+
+Now we have a very low p-value (0.004076), and the confidence interval does not include F=1. So the variances are NOT equal.
+
+__
+h)	If the data were to fail the assumptions of normality and/or homoscedasticity, list two options for proceeding with analysis of this data.
+__
+
+We may consider a data transformation, or we may use a heteroscedastic statistical test. We will use the latter.
+
+
+
+
+
+__
+i)	If your data do not meet the assumption of equal variances, use a heteroscedastic t-test. Calculate your test statistic (by hand or in Excel) as described in the lecture.
+__
+
+```{r}
+#
+t.test(
+    fat.df$Hamburger.saturated.fat..g.per.kg.,
+        fat.df$Pizza.saturated.fat..g.per.kg., 
+    paired=FALSE,var.equal = FALSE
+    )
+```
+
+
+
+__
+j)	What are the degrees of freedom for your test?
+__
+
+29.748, using heteroscedastic formula.
+
+
+__
+k)	What is the critical value of the test statistic for this test (from the critical values table)?
+__
+
+```{r}
+qt(0.025,df = 29.748)
+```
+
+
+
+
+__
+l)	Do you accept or reject your null hypothesis?
+__
+
+Any of these results cause us to reject the Null Hypothesis:
+
+* p ~ 3e-5
+* The confidence interval does not include zero.
+* The t-statistic (-4.9) is more extreme than the critical t value (-2.04).
+
+
+
+__
+m)	What does this mean for your alternate hypothesis?
+__
+
+We accept the Alternative Hypothesis: the mean fat content of pizzas and hamburgers are different.
+
+---
+
+### Question 3
+
+__
+3)	In the Excel workbook called <Tutorial 6 Data> (on the LEO site), the second Tab, labelled <Fat content>, contains measures of the saturated fat content (in grams per kg) of tested hamburgers and pizzas. You have been asked to assess whether hamburgers or pizzas contain more saturated fat per kg eaten.
+__
+
+__
+a)	Import the data into SPSS and analyse using an independent samples t-test (refer to the file <SPSS V20 Instructions> on LEO if necessary). 
+__
+
+It's hard to get the SPSS output to fit. So far, the cleanest result is to export the output from SPSS as plain text, and paste it here in a code chunk, to prevent formatting.
+
+```
+Independent Samples Test
+|-------------------------------|--------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------|
+|                               |Levene's Test for Equality of Variances     |t-test for Equality of Means                                                                                                                |
+|                               |---------------------------------------|----|----------------------------|------|---------------|---------------|---------------------|--------------------------------------------------|
+|                               |F                                      |Sig.|t                           |df    |Sig. (2-tailed)|Mean Difference|Std. Error Difference|95% Confidence Interval of the Difference         |
+|                               |                                       |    |                            |      |               |               |                     |-----------------------------------------|--------|
+|                               |                                       |    |                            |      |               |               |                     |Lower                                    |Upper   |
+|---|---------------------------|---------------------------------------|----|----------------------------|------|---------------|---------------|---------------------|-----------------------------------------|--------|
+|fat|Equal variances assumed    |8.683                                  |.005|-4.914                      |40    |.000           |-8.08476       |1.64514              |-11.40971                                |-4.75981|
+|   |---------------------------|---------------------------------------|----|----------------------------|------|---------------|---------------|---------------------|-----------------------------------------|--------|
+|   |Equal variances not assumed|                                       |    |-4.914                      |29.748|.000           |-8.08476       |1.64514              |-11.44578                                |-4.72374|
+|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+```
+
+This table gets wrapped when rendered, but it should be readable.
+
+Note in the "Equal variances assumed" row, an F statistic (Levene's) and a p-value are shown. The low p indicates the variances of the groups are significantly different.
+
+In both result rows, a t-statistic is given, and confidence intervals. These agree with the R computation above.
+
+
+__
+b)	Based on the output from SPSS, do you accept or reject your null hypothesis?
+__
+
+Reject H0.
+
+
+__
+c)	In the correct format, report your findings.
+__
+
+The mean fat content of hamburgers and pizzas are different (Homoscedastic t-test, t = -4.91, df =29.7, p < 0.05)
+
+---
+
+---
+

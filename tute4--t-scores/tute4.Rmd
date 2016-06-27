@@ -1,0 +1,302 @@
+---
+title: "Tutorial 4 -- t-scores"
+output: html_document
+author: "Peter Mahoney, Andrej Panjkov"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+require(nortest)
+```
+
+## Part 1
+
+### Question 1
+
+__
+1)	In a sample of 20 patients at an oncology clinic, the mean age of patients treated is 57.4 years, with a standard deviation of 5.2 years. You meet a person aged 86 outside the clinic...
+__
+
+__
+a)	What is the t¬-score for this individual? 
+__
+
+```{r}
+t.score <- (86-57.4)/5.2
+print(t.score)
+
+```
+
+__
+b)	What are the degrees of freedom for this t-score? 
+__
+
+
+```{r}
+print (20 -1)
+```
+__
+c)	At α = 0.01, is this person likely to be a patient at the clinic? 
+__
+To answer this, we use the built in _quantile function_ for the t-distribution.  (Inverse of the t-distribution area  - Gives the critical values for each alpha, ie Gives x s.t. P(t<x) = 1-alpha).  Note that qt gives the one-tailed probability.  So we use the symmetry of the t-distribution here.
+
+
+```{r}
+alpha<-0.01
+df <- 20-1
+t.critical <- qt(1.0-alpha/2,df) #RH critical t-value
+print(t.critical)
+```
+So as t.score > t.critical, it is unlikely the person is one of the patients.
+
+
+__
+d)	Is it at all possible that this person is a patient at the clinic?
+__
+
+Yes, but the probability of randomly picking a person this old from the patient pool is < 0.01 (1%)
+
+
+### Question 2
+
+__
+2)	Open the Excel workbook called <Tutorial 4 Data> (on the LEO site).  In the first Tab, labelled <Wrestler heights>, are the heights (in cm) of a sample of male professional wrestlers. You meet a man who is 184cm tall and claims to be a professional wrestler.
+__
+
+From Excel, we export the data as a CSV file, and read it into R. (Rstudio allows tab completion to pick and fill in the file name.)
+
+```{r}
+wrestler.heights <- read.csv("Tutorial 4 Data Wrestler Heights.csv", header=TRUE)
+
+```
+
+__
+a)	Given the evidence you have about the heights of professional wrestlers, what is the t¬-score for this individual? 
+__
+
+```{r}
+x = 184
+t.score <- (x -mean(wrestler.heights$Heights..cm.))/sd(wrestler.heights$Heights..cm.)
+print(mean(wrestler.heights$Heights..cm.))
+print(sd(wrestler.heights$Heights..cm.))
+
+print(t.score)
+```
+
+
+__
+b)	What are the degrees of freedom  for this t-score?
+__
+
+```{r}
+n <- length(wrestler.heights$Heights..cm.)
+df <- n-1
+df  # just giving an object name causes it to be printed - print is the default method on objects
+```
+
+__
+c)	At α = 0.05, is this person likely to be a professional wrestler? 
+__
+
+```{r}
+alpha = 0.05
+t.critical <- qt(1.0-alpha/2,df) #RH critical t-value
+print(t.critical)
+```
+
+As -t.critical < t.score < t.critical, this person's height is in the middle of the distribution, and not in the extremes.  "So this person is likely to be a wrestler." (More precisely - this person's height is not exceptional among the population of wrestlers.) 
+
+### Question 3
+__
+3)	In the Excel workbook called <Tutorial 4 Data> (on the LEO site), the second Tab, labelled <More data>, contains a expanded sample of the heights (in cm) of male professional wrestlers. Note that the first ten heights are the same, this expanded data set is the result of meeting and measuring some additional wrestlers. Reassess your previous judgements of the man who is 184cm tall and claims to be a professional wrestler.
+__
+
+```{r}
+wrestler.heights <- read.csv("Tutorial 4 Data Wrestler Heights - more data.csv", header=TRUE)
+
+```
+
+
+__
+a)	What is the t-score for this individual? 
+__
+
+```{r}
+x = 184
+t.score <- (x -mean(wrestler.heights$Heights..cm.))/sd(wrestler.heights$Heights..cm.)
+print(t.score)
+mean(wrestler.heights$Heights..cm.)
+sd(wrestler.heights$Heights..cm.)
+```
+
+Notice the t.score has changed now that we have more data.
+
+__
+b)	What are the degrees of freedom  for this t-score?
+__
+
+```{r}
+n <- length(wrestler.heights$Heights..cm.)
+df <- n-1
+df  # just giving an object name causes it to be printed - print is the default method on objects
+```
+
+__
+c)	At α = 0.05, is this person likely to be a professional wrestler? No, because |-2.473| > 2.120, therefore the probability of randomly picking a wrestler of this height is < 0.05.
+__
+
+```{r}
+alpha = 0.05
+t.critical <- qt(1.0-alpha/2,df) #RH critical t-value
+print(t.critical)
+```
+
+Now we have t.score  < -t.critical, (i.e. in the left tail) so this person's height is unusual among the wrestlers. It would be reasonable to conclude that this person is unlikely to be a wrestler.
+
+__
+d)	If you have changed your conclusion about this man's claim, what has led to this change? 
+__
+
+There are two things happening here. Firstly, by increasing our sample size, we reduce t.critical's magnitude. Secondly, the extra data has reduced the standard deviation, thus increasing the t-score. Together, these effects moved the t-score from the middle of the distribution to the alpha=0.05 tail.
+
+
+## Part 2
+
+__
+Part 2: Testing for normality
+__
+
+__
+In the Excel workbook called <Tutorial 4 Data> (on the LEO site), the third Tab, labelled <Tiger shark data>, contains observations of the lengths (in cm)of juvenile tiger sharks (Galeocerdo cuvier) tagged near Port Stephens NSW.
+__
+
+```{r}
+tigershark.df <- read.csv("Tutorial 4 Data Tiger shark data.csv", header=TRUE)
+
+tigershark.df$Lengths..cm.[1:5]
+```
+
+__
+1)	Create a stem and leaf plot of the data. Do the data look to be normally distributed?
+__
+
+```{r}
+stem(tigershark.df$Lengths..cm.)
+```
+
+This stem and leaf plot looks bimodal.
+
+### Question 2
+
+__
+2)	Import the data from Excel into SPSS (refer to the textbook or to the file <SPSS V20 Instructions> on LEO if necessary). Use SPSS to conduct a Kolmogorov Smirnov test for normality. Are the data normally distributed at α = 0.05?
+__
+
+We are using R here. The stats package has the Kolmogorov-Smirnov test.  We use the version of ks.test takes as its second argument the name of an R function for a continuous distribution. The remaining parameters are the parameters of the distribution. As we are testing for normality, we specify "pnorm" as the distribution, and give the sample mean and standard deviation as its parameters.
+
+```{r}
+require(stats)
+library(stats)
+mean(tigershark.df$Lengths..cm.)
+sd(tigershark.df$Lengths..cm.)
+ks.test(tigershark.df$Lengths..cm., 
+        "pnorm",
+        mean(tigershark.df$Lengths..cm.),
+        sd(tigershark.df$Lengths..cm.))
+
+
+
+```
+
+As the p-value is > alpha = 0.05, this test leads us to accept the Null hypothesis, that this data is normally distributed with mean and standard deviation as estimated from the sample.
+
+Note that this is different to the SPSS result.  Both R and SPSS compute the same statistic (D=0.127), but SPSS gives a "Lillefors corrected" p-value of 0.042. With that p-value, we reject the null hypothesis, and conclude the data is not normal.
+
+The difference is because we should not be using the sample to estimate the parameters of the normal distribution. The Lillefors distribution does not use these estimates. Observe also the warning about ties.
+So we should be careful about using the KS test here.
+
+We might try a different test. Let's use the Shapiro-Wilk Normality test:
+
+```{r}
+shapiro.test(tigershark.df$Lengths..cm.)
+```
+
+Now we see a very small p-value, 0.001341. So we reject the null hypothesis; we say the data is not from a normal distribution.
+
+Another assessment of normality can be done with a q-q plot. This plots sample quantiles against normal distribution quantiles.
+
+```{r}
+qqnorm(tigershark.df$Lengths..cm.)
+qqline(tigershark.df$Lengths..cm.)
+```
+
+The line shows where normal data should lie. Here we see strong deviations from normal at the tails, in as close as 1 standard deviation from the median/mean.
+
+We can do more normality tests by downloading and installing the add-on package `nortest` from the CRAM repository of R packages. This package has a number of normality tests.  (I did the install using the RSTudio IDE.)
+
+The Lilliefors test:
+
+```{r}
+require(nortest)
+lillie.test(tigershark.df$Lengths..cm.)
+```
+
+This matches the result from SPSS, with p= 0.042. We can use this to mimic the "KS" test from SPSS.
+
+The Anderson-Darling test:
+
+```{r}
+ad.test(tigershark.df$Lengths..cm.)
+```
+This also rejects the null hypothesis; the data are not drawn from a normal distribution.
+
+## Part 3
+
+
+__
+1)	If the data in Part 2 of the tutorial are not normally distributed, what type of transformation would be used to correct this? 
+__
+
+__
+2)	In Excel, transform this data according to your above answer .
+__
+
+__
+3)	Import the untransformed data from Excel into SPSS (refer to the textbook or to the file <SPSS V20 Instructions> on LEO if necessary). In SPSS, perform both a Log transformation and square root transformation on the data.
+__
+
+__
+4)	Which of the above transformations brings the data closest to a normal distribution? 
+__
+
+The lecture notes suggest log or square root.
+
+We can try some!
+
+```{r}
+lillie.test(log(tigershark.df$Lengths..cm.))
+lillie.test(sqrt(tigershark.df$Lengths..cm.))
+```
+
+Either of these gives a p-value > 0.05, so either transformation has produced normal data.  Sqrt has the higher p-value.
+
+__
+5)	If the data had been observations of the lengths of each juvenile shark tagged as a proportion of the known maximum length for the species, what type of transformation would you have used instead?
+__
+
+As per lecture notes: Arcsine transformation - this transformation works with data that are proportions.
+
+
+---
+
+
+
+
+
+
+
+
+

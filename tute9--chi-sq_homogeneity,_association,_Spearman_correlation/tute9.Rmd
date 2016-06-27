@@ -1,0 +1,442 @@
+---
+title: "Tutorial 9 - Goodness of Fit, Association Tests of Frequency Data, Spearman Correlation"
+output: html_document
+author: Peter Mahoney, Andrej Panjkov
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This Rmd file was developed under Linux. New in this file: tables (fiddly); embedded LaTeX.
+
+## Part 1: Goodness of fit tests
+
+__
+The following data are observed frequencies of different colour patterns in male Cunningham's skinks (Egernia cunninghami). Based on observations we believe that some colour patterns may have better camouflage and thus better survival than others.
+__
+
+
+
+
+| Colour | 1 | 2 | 3  | 4 | 5  | 6  | 7 | 8  | 9 | 10 | 11 |
+|--------|---|---|----|---|----|----|---|----|---|----|----|
+| Count  | 6 | 8 | 10 | 4 | 14 | 12 | 6 | 10 | 8 | 10 | 12 |
+
+Begin by putting this data into a dataframe.
+
+```{r}
+
+skink.colour.df = data.frame( 
+    count=c(6, 8, 10, 4, 14, 12, 6, 10, 8, 10, 12), 
+    colour=as.factor(c(1 , 2 , 3  , 4 , 5  , 6  , 7 , 8  , 9 , 10 , 11))
+)
+```
+
+
+
+__
+a) What will your null hypothesis (H0) be for this analysis?
+__
+
+
+H0: The frequencies of the colour patterns are uniformly distributed.  
+We will test this with a $\chi^2$ Test of Homogeneity.
+
+__
+b) What will your alternate hypothesis (H1) be for this analysis?
+__
+
+ 
+H1: The frequencies of the colour patterns are **not** uniformly distributed.
+
+
+__
+c) What are the degrees of freedom for your test?
+__
+
+The degrees of freedom are $n - 1$, where $n$ is the number of frequency classes. 
+
+```{r}
+
+N <- 11
+dof <- N-1
+dof
+
+```
+
+__
+d) What are the assumptions of your chosen test?
+__
+
+1. Samples are random.
+
+2. Observations are independent.
+
+3. Expected frequencies are all $\ge 5$.
+
+
+__
+e) Do the data satisfy these assumptions?
+__
+
+For 1. and 2. we will suppose that the data was gathered in such a way that the samples were chosen randomly, and the observations were independent.
+
+For 3: we will need to compute the expected frequencies.  In the next question, we see that this condition is met.
+
+__
+f) What are the expected frequencies for each colour pattern?
+__
+
+```{r}
+
+ef = sum(skink.colour.df$count)/length(skink.colour.df$colour)
+ef
+
+```
+
+
+__
+g) Calculate the chi-square statistic to test your null hypothesis.
+__
+
+Firstly, we'll just get R to do it:
+
+```{r}
+# If we provide only one data set, chisq.test checks its distribution against a uniform distribution by default: p = rep(1/length(x), length(x)). Otherwise, it compares the distributions of two (or more) sample groups.
+x <- chisq.test(skink.colour.df$count)
+x
+```
+
+As the p-value is $> 0.05$, we accept the Null, H0.  
+
+
+
+
+
+As $\chi^2_{calc} < \chi^2_{crit}$, we accept H0.
+
+__
+h) What is the critical value of the test statistic for this test at α = 0.05 (from the critical χ2 table)?
+__
+
+
+```{r}
+qchisq(0.95, dof)
+```
+
+Note: here we use a one-tailed distribution, so the quantile is $1 - \alpha$.
+
+__
+i) Do you accept or reject your null hypothesis at α = 0.05?
+__
+
+
+Accept: the frequencies of the colour patterns are uniformly distributed.
+
+__
+j) What does this mean for your alternate hypothesis?
+__
+
+
+Reject.
+
+__
+k) Report your results in the correct format.
+__
+
+The frequencies of colour patterns in Cunningham’s skinks were not significantly different from a uniform distribution (Chi-square test of homogeneity, $\chi^2_{10} = 10.0$; p = `r x$p.value` ).
+
+---
+
+## Part 2: Association tests for frequency data
+
+__
+The following data are observed frequencies of boot sizes worn by professional football players from two different codes. You suspect that there may be a difference in the distribution of boot sizes between the two different codes.
+__
+
+
+
+
+
+| Boot size | 9 | 10 | 11 | 12 | 13 | 14 |
+|-----------|---|----|----|----|----|----|
+|  Rugby    | 6 | 10 | 12 | 10 | 6  | 5  |
+|  AFL      | 8 | 14 | 8  | 8  | 7  | 6  |
+
+ 
+```{r}
+# chisq.test will want a matrix object, rather than a dataframe.  So we will store the data in a matrix.
+
+    size=factor(c(9,10,11,12,13,14))
+    rugby=c(6,10,12,10,6,5)
+    afl=c(8,14,8,8,7,6)
+
+boot.size.matrix = rbind(rugby,afl)
+colnames(boot.size.matrix) <- size
+boot.size.matrix
+
+```
+
+__
+a) What will your null hypothesis (H0) be for this analysis?
+__
+
+H0:  The distribution of boot sizes is the same for the two football codes.
+
+__
+b) What will your alternate hypothesis (H1) be for this analysis?
+__
+
+H1: The two football codes have different distributions.
+
+__
+c) What are the degrees of freedom for your test?
+__
+
+We will be using a $\chi^2$ test of homogeneity/association. We will let R do this with `chisq.test`, but for now:
+
+```{r}
+boots.dof <- (dim(boot.size.matrix)[[1]] - 1) *
+    (dim(boot.size.matrix)[[2]] - 1)
+boots.dof
+
+```
+
+
+
+__
+d) What are the assumptions of your chosen test?
+__
+
+1. Samples are random.
+
+2. Observations are independent.
+
+3. Expected frequencies are all $\ge 5$.
+
+
+__
+e) Do the data satisfy these assumptions?
+__
+
+For 1. and 2. we will suppose that the data was gathered in such a way that the samples were chosen randomly, and the observations were independent.  (One way in which they may fail to be independent is if a player who plays in both codes contributed boot sizes for each code.  A failure of random sampling could occur if we only sample on a day when junior teams are playing.)
+
+For 3: we will need to compute the expected frequencies.  In the next question, we see that whether this condition is met.
+
+__
+f) What are the expected frequencies for each ~~colour pattern~~boot size in each football code?
+__
+
+We could code this up with loops.  Let's see if R offers something.  As one might expect, `chisq.test` computes the expected frequencies contingency table internally in the course of computing $\chi^2$, so perhaps we can access it.  The help page reveals that `chisq.test` returns an object of class `htest` with an attribute `expected`.  
+
+```{r}
+chisq.test(boot.size.matrix)$expected
+
+```
+
+... and all the expected frequencies are $> 5$, so the third condition is met.  It would be better to check this condition for _applying_ the test without _carrying_ out the test.
+
+We can inspect the code for `chisq.test` by typing its name in the console, without parentheses or arguments. This reveals that the expected frequencies contingency table is calculated using the `outer` function, an outer product of two arrays, a vector of row sums and a vector of column sums.
+
+```{r}
+# Nicer than looping.
+x <- boot.size.matrix
+grand.sum <- sum(x) ; grand.sum
+sr <- rowSums(x) ; sr
+sc <- colSums(x); sc
+E <- outer(sr, sc, "*")/grand.sum ; E
+
+```
+
+__
+g) Calculate the chi-square statistic to test your null hypothesis.
+__
+
+```{r}
+x <- chisq.test(boot.size.matrix)
+boot.p = x$p.value
+boot.statistic = x$statistic
+x
+
+```
+
+High p-value: accept H0, boot size distributions are the same, statistically.
+
+__
+h) What is the critical value of the test statistic for this test at α = 0.05 (from the critical χ2 table)?
+__
+```{r}
+qchisq(0.95, df = boots.dof)
+```
+Note one-tailed quantile: 0.95, not 0.975.
+
+__
+i) Do you accept or reject your null hypothesis at α = 0.05?
+__
+
+ *  High p-value,or,
+ *  $\chi^2_{calc} < \chi^2_{crit}$
+
+so we accept H0.
+
+
+__
+j) What does this mean for your alternate hypothesis?
+__
+
+We reject H1.
+
+__
+k) Report your results in the correct format.
+__
+
+The distribution of boot sizes among rugby and AFL players is independent of football code. (Chi-squared test of association, $\chi^2_{5} = `r sprintf("%.3f",boot.statistic)`$, $p = `r sprintf("%.3f",boot.p)`$) [^1]
+
+---
+
+## Part 3: Spearman Correlation
+
+__
+Open the Excel workbook called <Tutorial 9 Data> (on the LEO site).  In the first Tab, labelled <Exam Results>, are the mean number of hours per week studies by statistics students in the month before their final exam and their final exam marks. You are curious to see whether there is a relationship between means hours of study and exam results in these students.
+__
+
+I exported the Excel data to a .csv file.
+```{r}
+exam.results.df <- read.csv("Exam_Results", header=TRUE, row.names = 1)
+exam.results.df
+```
+
+
+__
+Even though the data here are normally distributed, use Spearman correlation to test your null hypothesis.
+__
+
+
+
+__
+a) What will your null hypothesis (H0) be for this analysis?
+__
+
+H0: There is a correlation between Mean Study Hours per Week and the Final.Exam.Mark. (Spearman $\rho = 0$)
+
+__
+b) What will your alternate hypothesis (H1) be for this analysis?
+__
+
+H0: There is a correlation between Mean Study Hours per Week and the Final.Exam.Mark. (Spearman $\rho \ne 0$)
+
+__
+c) What are the assumptions of Spearman correlation?
+__
+
+ * Each group contains ≥ 6 observations
+ * That a linear relationship exists between the variables
+
+
+__
+d) Do the data satisfy these assumptions?
+__
+
+ * There are 30 observations.
+ * Let's see the scatterplot again.  Yes, a linear model appears plausible.
+ 
+ 
+```{r}
+plot(exam.results.df)
+```
+
+__
+e) Is the relationship between these two variables positive or negative?
+__
+
+From the scatterplot, we see a positive relationship.
+
+__
+f) Calculate your test statistic (by hand) as described in the lecture.
+__
+
+First, we'll just use an R function.
+
+```{r}
+attach(exam.results.df)
+x <- cor.test(Mean.Study.Hours.Week, Final.Exam.Mark, method='spearman')
+x
+```
+
+Note very small p-value.  We reject H0.
+
+Now we will construct the test statistic by programming.  (This will not generate a p-value though.)
+
+```{r}
+attach(exam.results.df)
+study.ranks <- rank(Mean.Study.Hours.Week, ties.method = "average")
+mark.ranks <- rank(Final.Exam.Mark, ties.method = "average")
+# In same order as source vectors, i.e. by student
+study.ranks
+mark.ranks
+
+d.squared <- (study.ranks - mark.ranks)^2
+d.squared
+
+n <- length(rownames(exam.results.df))
+rho.explicit <- 1 - 6 * sum(d.squared) / (n^3 - n )
+rho.explicit
+```
+
+This is close to R's $\rho$, the difference being `r x$estimate - rho.explicit`.
+Inspecting the code for cor.test using `getAnywhere(cor.test.default)` and the help pages, we see that there is a parameter to `cor.test`, `exact` which selects the method of computation. Default value is `NULL`, which uses an asymptotic $t$ approximation.  This is presumably for performance reasons, and/or possibly for numerical stability reasons. However, if we set `exact=TRUE`, we don't recover the exact Spearman $\rho$. The help page refers to an Edgeworth series approximation which would apply here, as $n =  `r n`$.
+
+```{r}
+cor.test(Mean.Study.Hours.Week, Final.Exam.Mark, method='spearman',exact=TRUE)
+```
+
+
+
+__
+g) What is the critical value of the test statistic for this test at α = 0.05 (from the critical values table)?
+__
+
+```{r}
+require(SuppDists)
+rho.critical <- qSpearman(0.975,length(rownames(exam.results.df)))
+```
+
+Note this is slightly different to the value in Spearman $\rho$ table supplied in the tutorial. Other values differ too. TODO: resolve this discrepancy.
+
+__
+h) Do you accept or reject your null hypothesis at α = 0.05?
+__
+
+ 1. p-value much less than 0.05.  Reject H0.
+ 
+ 2. $\rho_{calc} = `r x$estimate` \gt \rho_{crit} = `r rho.critical`$. Reject H0.
+
+__
+i) What does this mean for your alternate hypothesis?
+__
+
+We accept the alternative hypothesis, H1.
+
+There is a positive correlation between mean hours of study per week and final exam mark. (Spearman Correlation, $\rho = `r x$estimate`$, $n = 30$, $p \lt 0.05$)
+ [^2]
+
+__
+j) In Tutorial 7, you tested this same data using Pearson correlation. Do your results from that analysis differ from your results today in any way?
+__
+
+We could revisit tutorial 7, but instead:
+
+```{r}
+attach(exam.results.df)
+x <- cor.test(Mean.Study.Hours.Week, Final.Exam.Mark, method='pearson')
+x
+```
+We get the same conclusion, with similar values for the Pearson and Spearman coefficients, and similar p-values.
+
+---
+**Footnotes**
+
+[^1]: This text block demonstrates that in-line R code can be nested inside inline equation expressions within text. (And this tests footnotes - note `[^1]` link/anchor syntax.)
+
+[^2]: `cor.test` warned that exact p-values cannot be computed when there are ties, and the output gave p-value < 2.2e-16.  Actually inspecting the returned p-value gave a value about 1e-23.  So safest to just put $p < 0.05$.

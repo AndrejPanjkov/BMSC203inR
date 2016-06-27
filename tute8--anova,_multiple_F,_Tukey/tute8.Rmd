@@ -1,0 +1,342 @@
+---
+title: "TUTORIAL 8"
+output: html_document
+author: "Peter Mahoney, Andrej Panjkov"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Another exercise in R. This one is back in RStudio,  which I think works better with R than Jupyter (the ipython notebook). Also, I can edit Rmarkdown files with a text editor, whereas .ipynb files are nasty inside, and best only edited with jupyter.
+
+This time I am experimenting with the git version control, and there will be more traditional programming for the sums in ANOVA.
+
+# Part 1: One-way ANOVA
+
+__
+Open the Excel workbook called Tutorial 8 Data (on the LEO site). The first Tab, labelled Weight loss data, lists the weight (in kg) lost by dieters on three different diet programs across a one month trial. You are curious to see whether the diets were equally effective or not and decide to analyse the data using one-way ANOVA.
+__
+```{r}
+wtloss = read.csv(file = "Tutorial 8 Data.csv", header=TRUE)
+wtloss
+summary(wtloss)
+apply(wtloss, 2, sd)
+for (i in colnames(wtloss)){
+    hist(wtloss[,i],
+         main=paste("Histogram of ",i),
+         xlab=i)  # just using apply, have to fiddle with names
+}
+```
+
+
+__
+a)	What will your null hypothesis (H0) be for this analysis?
+__
+
+H0: The mean weight losses for each group of dieters are equal.
+
+__
+b)	What will your alternate hypothesis (H1) be for this analysis?
+__
+
+H1: The mean weight losses for each group of dieters are unequal.
+
+__
+c)	Are your factors fixed or random?
+__
+
+Here we are using *fixed* factors.
+
+__
+d)	What are the assumptions of your chosen test?
+__
+
+One way ANOVA:
+
+1. Dependent variable continuous (ratio or interval)
+2. Independent variable ≥ 3 independent categories
+3. Groups are independent
+4. Data in each group normally distributed
+5. Groups have homogeneous variances
+
+__
+e)	Do the data satisfy these assumptions? (Give your evidence here.)
+__
+
+1. Weight loss data are continuous ratio variables.
+2. 3 Factors/categories
+3. We presume independence - unrelated randomly selected EUs, diets independent, etc.
+4. Normal distributions, all p > 0.12 see Shapiro-Wilk tests below.  (Recall I prefer SW to KS.)
+5. Homogeneous variances, p=0.984, see Bartlett test below (or could do an Fmax.)
+
+```{r}
+apply(wtloss, 2, shapiro.test) # 2 - apply to columns
+bartlett.test(wtloss)
+```
+
+__
+Remember that in ANOVA, we split the total variance for all of the data into two parts: a) the variance within the groups; and b) the variance among the groups.
+__
+
+Here we will program a manual computation in R. This will demonstrate the vector arithmetic semantics of R.
+
+A direct ANOVA call is in part 3.  
+
+__
+f)	Calculate the variance among groups (this is the sum of squares for the deviation between the mean of the group in which the observation occurs and the grand mean of all of the data divided by the degrees of freedom).
+__
+
+So first we need the grand mean, and the group means.
+
+```{r}
+grand.mean <-  mean(as.matrix(wtloss)) # Flatten dataframe
+group.means <- apply(wtloss, 2, mean)
+grand.mean; group.means
+```
+
+How to proceed next? I could do an old-style loop to compute the sums, but I'm looking for a vectorised expression.
+
+Also, I want to allow for the possibility that the treatment groups have different data counts.
+
+Here, I will generate commensurate data frames, and combine them arithmetically.
+
+```{r}
+#Extracting dof from dataframe instead of hard coding.
+ngroups = length(colnames(wtloss))
+dof1 = ngroups - 1 # no of groups
+dof2 = sum(apply(wtloss, 2, length)) - ngroups # in case groups (cols, "2") have different lengths
+
+```
+
+```{r}
+# Variance among groups (SS(Tr))
+
+# The common row in the variance among groups
+x <- (as.vector(group.means) -grand.mean)^2
+counts <- apply(wtloss,2,length)
+x; counts
+
+ss.among.groups <- sum(counts*x)
+var.among.groups <- ss.among.groups/dof1
+
+ss.among.groups ; var.among.groups
+```
+
+
+__
+g)	Calculate the variance within groups (this is the sum of squares for the deviation between each observation and the mean of the group in which the observation occurs divided by the degrees of freedom - remember that there are 60 observations in the data set - 20 in each group).
+__
+
+```{r}
+# Variance within groups
+
+# dataframe with group means in rows
+
+x <- rep( as.vector(group.means), 
+     length( rownames(wtloss)))
+
+dim( x) <- c( length(group.means),length(rownames(wtloss))) # reshape vector to same shape as wtloss
+x <- t(x) #transpose (would be better to do in place)
+
+ss.within.groups = sum((wtloss - x)^2)
+var.within.groups = ss.within.groups/dof2
+ss.within.groups ; var.within.groups
+
+```
+
+
+
+__
+h)	What are the degrees of freedom for your test?
+__
+
+```{r}
+#Extracting dof from dataframe instead of hard coding.
+ngroups = length(colnames(wtloss))
+dof1 = ngroups - 1 # no of groups
+dof2 = sum(apply(wtloss, 2, length)) - ngroups # in case groups (cols, "2") have different lengths
+dof1 ; dof2
+
+```
+__
+i)	Calculate your test statistic (F) as described in the lecture.
+__
+
+```{r}
+F <- var.among.groups/var.within.groups
+F
+```
+
+__
+j)	What is the critical value of the test statistic for this test (from the critical F for ANOVA table)?
+__
+
+```{r}
+fcrit = qf(0.95, dof1, dof2); fcrit
+qf(0.95, dof1, 10000) # value used in tute from table
+```
+
+__
+k)	Do you accept or reject your null hypothesis at α = 0.05?
+__
+
+```{r}
+if ( F > fcrit) print("Reject H0, means are different") else print("Accept H0, means are same.")
+```
+
+__
+l)	What does this mean for your alternate hypothesis?
+__
+
+```{r}
+if ( F < fcrit) print("Reject H1, means are same") else print("Accept H1, means are different.")
+```
+
+__
+m)	What proportion of the total variance in the data is caused by variance among groups (r2)?
+
+```{r}
+
+ss.among.groups/(ss.among.groups+ss.within.groups)
+```
+
+__
+
+# Part 2: Thought experiment
+
+This part has no R demo.  Left undone.
+
+__
+Using only your understanding of how ANOVA works (i.e. try not to actually work out any of the mathematics). answer the following questions. These will require you to think laterally about what you have learned so far in BMSC203, so do not worry if it takes a while.
+__
+
+__
+1.	You want to know if beaches in QLD, NSW and VIC get similar numbers of visitors. You collect data on how many people visit five randomly chosen beaches in each state on one Thursday.
+__
+
+__
+Beach	1	2	3	4	5  
+QLD	20	20	20	20	20  
+NSW	15	15	15	15	15  
+VIC	10	10	10	10	10  
+__
+
+__
+ Based on the data, do you think that one-way ANOVA will detect a difference between the three states?
+__
+
+__
+2.	Another researcher gives you more data from the same day. He adds one more beach to your data set from each state from that same day.
+__
+
+__
+Beach	1	2	3	4	5	6  
+QLD	20	20	20	20	20	2  
+NSW	15	15	15	15	15	30  
+VIC	10	10	10	10	10	60  
+__
+
+__
+With this extra data, is one-way ANOVA now more likely or less likely to detect a difference between the three states? Give reasons for your decision?
+__
+
+# Part 3: One-way ANOVA in SPSS
+
+__
+Import the raw data from Excel workbook called Tutorial 8 Data (on the LEO site) into SPSS.
+__
+
+__
+a)	Use SPSS to test whether the data meet the assumptions of one-way ANOVA
+__
+
+Done in part 1.
+
+__
+b)	Test your null hypothesis in SPSS using one-way ANOVA. Make sure to select the option for post-hoc pair-wise testing using the Tukey test. Paste your output below.
+__
+
+oneway.test requires a dataframe with a data column, and a factor column (of levels). Our wtloss dataframe is structured with 3 columns, one for each diet level.  So we need to reshape the dataframe. The R Cookbook recipe 5.5 does it with the stack function. Yes, we can push cells around in Excel, but consider if there are hundreds of thousands of data...
+
+```{r}
+wtloss.stacked <- stack( wtloss ) # So easy! Compare SPSS data reformat wizard.
+colnames(wtloss.stacked) <- c("WeightLost", "Diet")
+oneway.test(WeightLost ~ Diet, wtloss.stacked, var.equal=TRUE)
+```
+
+These results match Peter's tute answers. Notice we don't get the standard ANOVA table of partial sums that SPSS (e.g.) spits out. We can get that with the anova function.  First the whole thing:
+
+
+```{r}
+result = anova(lm(WeightLost ~ Diet, wtloss.stacked))
+result
+```
+
+Perhaps we should use anova instead of oneway.test - more info.  We can probably extract the sums of squares from this object.
+
+The anova function wants as its first argument an object like lm or glm (TODO). Let's inspect that:
+
+```{r}
+WLvsD <- lm(WeightLost ~ Diet, wtloss.stacked)
+WLvsD
+```
+
+These coefficients seem to be meanA, meanB-meanA, meanC-meanA.  I'll need to read more.
+
+```{r}
+summary(WLvsD)
+```
+
+Perhaps the model treats Diet.A as the "dependent" and the others as the independents? Or vice-versa? To be continued...
+
+Just out of curiosity, let's see what we get if we set var.equal to False in oneway.test:
+
+```{r}
+oneway.test(WeightLost ~ Diet, wtloss.stacked, var.equal=FALSE)
+```
+
+__
+c)	Based on the output from your ANOVA in SPSS, do you have evidence for a significant difference in effectiveness among the diet treatments at α = 0.05?
+__
+
+Low p-value, accept alternative: means are different.
+
+Also, just to see F_crit:
+
+```{r}
+qf(0.95, 2,57)
+qf(0.95,2,10000)
+```
+
+The tute supplied F distribution table, jumps from df2=30 to df2=infinity.  In the tute, we just take the df2=infinity value, 2.996, (as reproduced above), but the more precise Fcrit is given with df2=57.
+
+Again, this looks like a one-sided test, as we use p=0.95, not p=0.975.
+
+I would like to understand why the three F-tests (F for 2 variances, Fmax, F for ANOVA) have different tables, when they are all F-distributed. Due to the different way of counting d.o.f.s I suspect.
+
+__
+d)	Look at the results of the Tukey post-hoc testing. Which diet treatment(s) are significantly different from the others?
+__
+
+Now we need a "model object", whatever that is.  See R Cookbook 11.23.  The TukeyHSD function gives a Tukey comparison table very similar to SPSS's one.
+
+```{r}
+TukeyHSD(aov(WeightLost ~ Diet, wtloss.stacked))
+```
+
+The other post-hoc tests listed in the lecture are available in CRAN third-party packages.  install and load these packages to access those functions. No opinion on quality of those implementations.
+
+*  Scheffe's test
+* SNK.
+
+__
+e)	Which diet treatment would you recommend to people wanting to lose weight?
+__
+
+Yeah, looks like Diet B results in the most weight loss.
+
+
+
+
+											
