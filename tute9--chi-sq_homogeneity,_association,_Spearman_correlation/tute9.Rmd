@@ -400,6 +400,7 @@ __
 ```{r}
 require(SuppDists)
 rho.critical <- qSpearman(0.975,length(rownames(exam.results.df)))
+rho.critical
 ```
 
 Note this is slightly different to the value in Spearman $\rho$ table supplied in the tutorial. Other values differ too. TODO: resolve this discrepancy.
