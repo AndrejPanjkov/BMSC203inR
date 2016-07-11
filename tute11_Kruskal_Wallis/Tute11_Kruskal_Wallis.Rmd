@@ -1,0 +1,252 @@
+---
+title: "Tutorial 11 - Kruskal-Wallis Test"
+output: html_document
+author: "Peter Mahoney, Andrej Panjkov"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Part 1 - Comparing averages
+
+_
+A psychologist wanted to test whether regular physical exercise had an effect on depression levels. Twenty four randomly selected people suffering from extreme depression were assigned to three treatment groups: subjects in Group A performed no physical exercise; subjects in Group B each exercised vigorously for 30 minutes per day; and subjects in Group C each exercised vigorously for 60 minutes per day. At the end of four weeks all subjects in the trial were asked to rate their level of depression on a scale from 1 (extremely depressed) to 100 (extremely happy). Their responses are shown below...
+_
+
+-----------------------------
+ Group A   Group B   Group C
+--------- --------- ---------
+23            22	 59
+
+26           27      66
+
+51           39      38
+
+49           29      49
+
+58            46     39
+
+37            48     59
+
+29            59      46
+
+44            55      63
+
+--------- --------- ---------
+
+```{r}
+x <- t(matrix(c(23,22,59,
+26,27,66,
+51,39,38,
+49,29,49,
+58,46,39,
+37,48,59,
+29,59,46,
+44,55,63), nrow=3,ncol=8))# R fills by column, so we transpose
+
+depr.df<- data.frame(x)
+
+colnames(depr.df)<-c("A","B","C")
+
+depr.df
+```
+
+_
+You must assess whether exercise has an effect on depression levels based on these data. Perform your calculations by hand or using Microsoft Excel.
+_
+
+_
+a)	On what scale were the data measured?
+_
+
+Ordinal.
+
+_
+b)	Are you able to use a parametric test with this data?
+_
+
+No, the relevant parametric test that we have covered - ANOVA - requires normally distributed ratio data.
+
+
+_
+c)	What statistical test will you use to analyse this data?
+_
+
+The non-parametric Kruskal-Wallis comparison of medians.
+
+_
+d)	What will your null hypothesis (H0) be for this analysis?
+_
+
+H0:  The median level of depression is the same for each group.
+
+_
+e)	What will your alternate hypothesis (H1) be for this analysis?
+_
+
+H1:  The median level of depression is the different across the groups.
+
+_
+f)	What are the assumptions of your chosen test?
+_
+
+ * At least three groups factored by an independent variable.
+ * Dependent variable must be numeric (not nominal).
+ * At least 5 observations per group.
+ * Each groups must have 'similar' distributions (possibly displaced).
+ 
+
+_
+g)	Do the data satisfy these assumptions? (Give your evidence here.)
+_
+
+We have 3 groups of ordinal data, with 8 observations each, so the first three conditions are met.
+
+To assess the fourth, we begin by plotting the distributions.
+
+```{r}
+library(plotrix) #provides parallel histogram plotter
+blue<-rgb(0,0.45,0.7,1/4)
+orange<-rgb(0.9,0.6,0,1/4)
+green<-rgb(0.0,0.9,0.4,1/4)
+colours<-c(blue,orange,green)
+
+multhist(depr.df, col=colours, freq=FALSE,
+         main="Depression Level Histograms",
+         xlab="Depression Level (0-100)",
+         ylab="Relative Frequency")
+legend("topright", colnames(depr.df), fill=colours)
+
+```
+
+There are too few data to conclude one way or another.
+
+Let's look at some q-q plots, these also indicate similarity of distributions.
+
+```{r}
+ngroups = length(colnames(depr.df))
+
+
+
+for (row in seq(1,ngroups-1)){
+    for (col in seq(row+1,ngroups)) {
+        qqplot(depr.df[[row]], depr.df[[col]],
+            xlab=colnames(depr.df)[row],
+            ylab=colnames(depr.df)[col],
+            main="Q-Q plot")
+        # qqPlot(lm(depr.df[[row]]~ depr.df[[col]]),
+        #     xlab=colnames(depr.df)[row],
+        #     ylab=colnames(depr.df)[col],
+        #     main="Q-Q plot of studentized residuals")
+    }
+}
+
+```
+
+I think (need to check this) that if the distributions are similar, then their quantiles should track linearly, so a Q-Q plot should be near a straight line.  This appears to be the case.
+
+Moving on...
+
+_
+h)	Calculate the test statistic for this analysis.
+_
+
+First we'll use R's builtin:
+
+```{r}
+result = kruskal.test(depr.df)
+result
+```
+
+The high p-value means this is an unexceptional result, the medians are not different.
+
+Now let's do the rank sum test explicitly.
+
+```{r}
+depr.stack.df <- stack(depr.df)
+ranks <- rank(depr.stack.df$values)
+
+# Attach ranks to pooled data.
+depr.stack.df <- cbind( depr.stack.df, ranks)
+
+#This code should be more functional.
+
+# Sum the ranks for each group
+sum.a <- sum(depr.stack.df$ranks[depr.stack.df$ind=="A"])
+sum.b <- sum(depr.stack.df$ranks[depr.stack.df$ind=="B"])
+sum.c <- sum(depr.stack.df$ranks[depr.stack.df$ind=="C"])
+
+#sum.a ; sum.b ; sum.c
+count.a = length(depr.df$A)
+count.b = length(depr.df$B)
+count.c = length(depr.df$C)
+count.pool = count.a+count.b+count.c
+H = 12/count.pool/(count.pool+1)*(
+    sum.a^2/count.a +
+    sum.b^2/count.b +
+    sum.c^2/count.c) - 
+    3*(count.pool+1)
+H
+```
+
+This is very close to the result from `kruskal.test`, but with enough of a difference to warrant investigation. As we discovered in the tutorial, this algorithm does not include a correction for ties, of which there are 4 (in pairs).  SPSS does, and returns the same H statistic as `kruskal.test`.  The correction for ties is described in wikipedia, and when implemented in Excel, matches the corrected statistic offered by SPSS and R.
+
+Here is some (unoptimised) code for applying the correction:
+
+```{r}
+#Detect ties, and count them. 
+#(O(n^2) code, rewrite for large datasets)
+
+# note use of unique function to prevent overcounting
+correction <- 0.0
+
+for (r in unique(depr.stack.df$ranks)){
+    # extract all matching ranks
+    match.r <- depr.stack.df$ranks[depr.stack.df$ranks==r]
+    match.length <- length(match.r)
+    if ( match.length > 1 ) {
+        correction <- correction + 
+            match.length^3 - match.length
+    }
+}
+correction <- 1- correction/(count.pool^3-count.pool)
+
+
+H/correction
+```
+
+...and we recover the corrected statistic.
+
+_
+i)	What is the critical value of the test statistic for this test (from the critical table)?
+_
+
+```{r}
+qchisq(0.95,2)
+```
+
+_
+j)	Do you accept or reject your null hypothesis?
+_
+
+We accepted the null based on the p-value above. 
+
+Here, $H_{\rm calc} < H_{\rm crit}$, so this also has us accept the null.
+
+_
+k)	What does this mean for your alternate hypothesis?
+_
+
+I spit on the alternative hypothesis.
+
+_
+l)	Report your results in the correct format.
+_
+
+There was no significant difference between the median level of depression in subjects performing differing amounts of exercise (Kruskal-Wallis test; H(2) = 4.50; p > 0.05) 
+
+(The remainder of the tutorial comprised non-computational questions.)
+
+---
