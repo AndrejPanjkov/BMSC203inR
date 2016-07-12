@@ -2,3 +2,10 @@
 *.Rproj.user
 *.Rhistory
 *.Rdata
+.RData
+.Rproj
+*.Rproj
+*-checkpoint.ipynb
+.gitnotes
+.swp
+*.swp
