@@ -3,7 +3,7 @@ Rstudio/Rmd and jupyter/R notebooks converting Biomedical Science Statistics Tut
 
 BMSC203 is a 2nd year statistics course offered at the Australian Catholic
 University. The course was developed by Jennifer Taylor and Peter Mahoney of
-ACu. I was privileged to help with the teaching in this subject, and it
+ACU. I was privileged to help with the teaching in this subject, and it
 was a good chance for me to review all the inferential statistics I was rather
 rusty on.
 
@@ -24,11 +24,19 @@ So this is an exercise in walking through R with externally set tasks.  Most of
 the scripts are Rmarkdown scripts developed using Rstudio. I quite like the
 Rstudio environment, it takes away a lot of the friction of developing R and searching and reading the documentation.
 
-Very pleasantly, every task was achievable with R.  I did some low level
+
+Very pleasantly, every task was achievable with R.   I did some low level
 programming for practice in the syntax, but all the tasks were doable with high
 level functions. Some of the functions had to be downloaded from CRAN.  They
 all seemed to work well, but I am curious about how well engineered the code
 is. Are there any unit tests?
+
+The statistical results obtained with R agreed with the hand-cast results, and
+the SPSS results (with perhaps very minor differences), except in the case of
+Tutorial 10, which covers Mann-Whitey-U and Wilcoxon-Signed-Rank tests.  Here,
+the table of critical values produced by R was quite different to the one in
+the tutorial (from Fowler).  A brief survey of critical values for these tests
+showed great variation between sources.
 
 One tute, tute7 was developed using jupyter with the R kernel. This was an
 experiment in using jupyter for literate programming in R. I decided that I
